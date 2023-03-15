@@ -1,3 +1,10 @@
+// main.cpp
+//
+// Dhruv Kamalesh Kumar
+// Yalala Mohit
+//
+// 03-13-2023
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -8,18 +15,19 @@ using namespace cv;
 
 cv::Mat cameraMatrix;
 cv::Mat distorstion;
+std::vector<cv::Mat> rotationVector, translationVector;
+cv::Mat rotation, translation;
 
 // method to calibrate the camera
 void calibrateCamera(std::vector<std::vector<cv::Point2f> > cornerList, std::vector<std::vector<cv::Vec3f> > pointList, cv::Mat frame)
 {
-    std::vector<cv::Mat> rotation, translation;
     cameraMatrix = cv::Mat::eye(3, 3, CV_64FC1);
     cameraMatrix.at<double>(0, 2) = frame.cols/2;
     cameraMatrix.at<double>(1, 2) = frame.rows/2;
     cout << "Original camera matrix:" << endl << cameraMatrix << endl;
     //Make vectors to be filled by the calibrate camera function
     distorstion = cv::Mat::zeros(5, 1, CV_64F);
-    double err = cv::calibrateCamera(pointList, cornerList, frame.size(), cameraMatrix, distorstion, rotation, translation);
+    double err = cv::calibrateCamera(pointList, cornerList, frame.size(), cameraMatrix, distorstion, rotationVector, translationVector);
     cout << "New camera matrix: " << endl << cameraMatrix << endl;
     printf("Error is: %f\n", err);
     cout << "Distortion " << endl << distorstion << endl;
@@ -54,6 +62,16 @@ int main()
         cv::Mat gray;
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY); // Convert to grayscale
 
+        // Create the point set of 3D positions
+        pointSet.clear();
+        for (int i = 0; i < chessboardRows; i++)
+        {
+            for (int j = 0; j < chessboardCols; j++)
+            {
+                pointSet.push_back(cv::Vec3f(j, i, 0));
+            }
+        }
+
         found = cv::findChessboardCorners(gray, cv::Size(chessboardCols, chessboardRows), corners); // Find the chessboard corners
         if (found)
         {
@@ -61,6 +79,39 @@ int main()
             cv::cornerSubPix(gray, corners, cv::Size(11, 11), cv::Size(-1, -1), criteria); // Refine the corner locations
             if(!calibrated){
             cv::drawChessboardCorners(frame, cv::Size(chessboardCols, chessboardRows), corners, found); // Draw the corners on the frame
+            }
+            else{
+                // since the camera is calibrated
+                // we first calculate the position of camera in the world
+                // we use cv::solvePnP to get the rotation and translation matrices
+                rotation = cv::Mat::zeros(3, 1, CV_64FC1);
+                translation = cv::Mat::zeros(3, 1, CV_64FC1);
+                bool result = cv::solvePnP(pointSet, corners, cameraMatrix, distorstion, rotation, translation);
+                if(result){
+                    // print the rotation and translation matrices
+                    std::cout << "Rotation: " << rotation << std::endl;
+                    std::cout << "Translation: " << translation << std::endl;
+                }
+                else{
+                    // print all other values
+                    std::cout << "Failed to solve PnP" << std::endl;
+                    // print pointSet
+                    std::cout << "Point set: " << std::endl;
+                    for(int i = 0; i < pointSet.size(); i++){
+                        std::cout << pointSet[i] << std::endl;
+                    }
+                    // print corners
+                    std::cout << "Corners: " << std::endl;
+                    for(int i = 0; i < corners.size(); i++){
+                        std::cout << corners[i] << std::endl;
+                    }
+                    // print camera matrix
+                    std::cout << "Camera Matrix: " << std::endl;
+                    std::cout << cameraMatrix << std::endl;
+                    // print distortion
+                    std::cout << "Distortion: " << std::endl;
+                    std::cout << distorstion << std::endl;
+                }
             }
             // Wait for user input to save the corner locations
             char key = cv::waitKey(1);
@@ -77,15 +128,6 @@ int main()
                 }
                 // Add the corners to the corner list
                 cornerList.push_back(corners);
-                // Create the point set of 3D positions
-                pointSet.clear();
-                for (int i = 0; i < chessboardRows; i++)
-                {
-                    for (int j = 0; j < chessboardCols; j++)
-                    {
-                        pointSet.push_back(cv::Vec3f(j, i, 0));
-                    }
-                }
                 pointList.push_back(pointSet);
             }
             // if the user presses 'w' it will write the camera matrix and distortion to a text file
@@ -111,6 +153,10 @@ int main()
             // if the user presses 'r' it will read the camera matrix and distortion from a text file
             if (key == 'r')
             {
+                cameraMatrix = cv::Mat::eye(3, 3, CV_64FC1);
+                cameraMatrix.at<double>(0, 2) = frame.cols/2;
+                cameraMatrix.at<double>(1, 2) = frame.rows/2;
+                distorstion = cv::Mat::zeros(5, 1, CV_64F);
                 std::cout << "Reading from file" << std::endl;
                 std::ifstream file;
                 file.open("calibration.txt");
@@ -133,7 +179,6 @@ int main()
                 std::cout << cameraMatrix << std::endl;
                 std::cout << "Distortion" << std::endl;
                 std::cout << distorstion << std::endl;
-        
             }
         
         }

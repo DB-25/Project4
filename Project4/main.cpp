@@ -60,15 +60,17 @@ int main()
     {
         cap >> frame; // Capture a frame
         cv::Mat gray;
+        if(frame.empty()){
+            std::cerr << "Failed to capture frame" << std::endl;
+            return -1;
+        }
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY); // Convert to grayscale
 
         // Create the point set of 3D positions
         pointSet.clear();
-        for (int i = 0; i < chessboardRows; i++)
-        {
-            for (int j = 0; j < chessboardCols; j++)
-            {
-                pointSet.push_back(cv::Vec3f(j, i, 0));
+          for(int i = 0; i > -chessboardRows; i--) {
+            for(int j = 0; j < chessboardCols; j++) {
+                pointSet.push_back(cv::Point3f(j, i, 0));
             }
         }
 
@@ -91,15 +93,55 @@ int main()
                     // print the rotation and translation matrices
                     std::cout << "Rotation: " << rotation << std::endl;
                     std::cout << "Translation: " << translation << std::endl;
+
+                    // lets draw the 3D Axes on the frame at the origin
+                    // we first create the 3D points for the axes
+                    std::vector<cv::Point3f> axes;  
+                    axes.push_back(cv::Point3f(0, 0, 0));
+                    axes.push_back(cv::Point3f(1, 0, 0));
+                    axes.push_back(cv::Point3f(0, 1, 0));
+                    axes.push_back(cv::Point3f(0, 0, 1));
+                    // we then project the 3D points to 2D points
+                    std::vector<cv::Point2f> projectedPoints;
+                    cv::projectPoints(axes, rotation, translation, cameraMatrix, distorstion, projectedPoints);
+                    // we then draw the arrowed lines
+                    cv::arrowedLine(frame, projectedPoints[0], projectedPoints[1], cv::Scalar(0, 0, 255), 2);
+                    cv::arrowedLine(frame, projectedPoints[0], projectedPoints[2], cv::Scalar(0, 255, 0), 2);
+                    cv::arrowedLine(frame, projectedPoints[0], projectedPoints[3], cv::Scalar(255, 0, 0), 2);
+
+                    // lets try to raw a 3D cuboid on the frame
+                    // we first create the 3D points for the cuboid
+                    std::vector<cv::Point3f> cuboid;
+                    // lets eliminate the first column
+                    cuboid.push_back(cv::Point3f(1, 0, 0));
+                    cuboid.push_back(cv::Point3f(1, -chessboardRows, 0));
+                    cuboid.push_back(cv::Point3f(chessboardCols, -chessboardRows, 0));
+                    cuboid.push_back(cv::Point3f(chessboardCols, 0, 0));
+                    cuboid.push_back(cv::Point3f(1, 0, 1));
+                    cuboid.push_back(cv::Point3f(1, -chessboardRows, 1));
+                    cuboid.push_back(cv::Point3f(chessboardCols, -chessboardRows, 1));
+                    cuboid.push_back(cv::Point3f(chessboardCols, 0, 1));
+                    // we then project the 3D points to 2D points
+                    std::vector<cv::Point2f> projectedCuboid;
+                    cv::projectPoints(cuboid, rotation, translation, cameraMatrix, distorstion, projectedCuboid);
+                    // we then draw the edges of the cuboid on the frame with a cyan color
+                    cv::line(frame, projectedCuboid[0], projectedCuboid[1], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[1], projectedCuboid[2], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[2], projectedCuboid[3], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[3], projectedCuboid[0], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[4], projectedCuboid[5], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[5], projectedCuboid[6], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[6], projectedCuboid[7], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[7], projectedCuboid[4], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[0], projectedCuboid[4], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[1], projectedCuboid[5], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[2], projectedCuboid[6], cv::Scalar(255, 255, 0), 2);
+                    cv::line(frame, projectedCuboid[3], projectedCuboid[7], cv::Scalar(255, 255, 0), 2);
+
                 }
                 else{
                     // print all other values
                     std::cout << "Failed to solve PnP" << std::endl;
-                    // print pointSet
-                    std::cout << "Point set: " << std::endl;
-                    for(int i = 0; i < pointSet.size(); i++){
-                        std::cout << pointSet[i] << std::endl;
-                    }
                     // print corners
                     std::cout << "Corners: " << std::endl;
                     for(int i = 0; i < corners.size(); i++){

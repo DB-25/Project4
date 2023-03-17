@@ -47,6 +47,7 @@ int main()
 
     cv::Mat frame;
     bool calibrated = false;
+    bool extension = false;
     int  numFramesCaptured = 0;
     std::vector<cv::Point2f> corners;
     bool found = false;
@@ -108,8 +109,59 @@ int main()
                     cv::arrowedLine(frame, projectedPoints[0], projectedPoints[1], cv::Scalar(0, 0, 255), 2);
                     cv::arrowedLine(frame, projectedPoints[0], projectedPoints[2], cv::Scalar(0, 255, 0), 2);
                     cv::arrowedLine(frame, projectedPoints[0], projectedPoints[3], cv::Scalar(255, 0, 0), 2);
-
-                    // lets try to raw a 3D cuboid on the frame
+                    if(extension){
+                        // lets draw a 3D house on the frame
+                        // we first create the 3D points for the house
+                        std::vector<cv::Point3f> house;
+                        // bottom corners
+                        house.push_back(cv::Point3f(1, 0, 0));
+                        house.push_back(cv::Point3f(1, -6, 0));
+                        house.push_back(cv::Point3f(9, -6, 0));
+                        house.push_back(cv::Point3f(9, 0, 0));
+                        // top corners
+                        house.push_back(cv::Point3f(1, 0, 3));
+                        house.push_back(cv::Point3f(1, -6, 3));
+                        house.push_back(cv::Point3f(9, -6, 3));
+                        house.push_back(cv::Point3f(9, 0, 3));
+                        // roof points
+                        house.push_back(cv::Point3f(1, -3, 6));
+                        house.push_back(cv::Point3f(9, -3, 6));
+                        // we then project the 3D points to 2D points
+                        std::vector<cv::Point2f> projectedPoints;
+                        cv::projectPoints(house, rotation, translation, cameraMatrix, distorstion, projectedPoints);
+                        
+                        // fill color for the house
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[0], projectedPoints[1], projectedPoints[2], projectedPoints[3]}}, cv::Scalar(255,255,255));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[0], projectedPoints[4], projectedPoints[7], projectedPoints[3]}}, cv::Scalar(204,209,72));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[1], projectedPoints[5], projectedPoints[6], projectedPoints[2]}}, cv::Scalar(204,209,72));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[4], projectedPoints[5], projectedPoints[8]}}, cv::Scalar(204,209,72));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[7], projectedPoints[6], projectedPoints[9]}}, cv::Scalar(204,209,72));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[0], projectedPoints[1], projectedPoints[5], projectedPoints[4],}}, cv::Scalar(211,0,148));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[3], projectedPoints[2], projectedPoints[6], projectedPoints[7],}}, cv::Scalar(211,0,148));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[8], projectedPoints[9], projectedPoints[7], projectedPoints[4],}}, cv::Scalar(211,0,148));
+                        cv::fillPoly(frame, std::vector<std::vector<cv::Point>>{std::vector<cv::Point>{projectedPoints[8], projectedPoints[9], projectedPoints[6], projectedPoints[5],}}, cv::Scalar(211,0,148));
+                        // we then draw the lines
+                        cv::line(frame, projectedPoints[0], projectedPoints[1], cv::Scalar(31, 240, 255), 4);
+                        cv::line(frame, projectedPoints[1], projectedPoints[2],  cv::Scalar(31, 240, 255), 4);
+                        cv::line(frame, projectedPoints[2], projectedPoints[3],  cv::Scalar(31, 240, 255), 4);
+                        cv::line(frame, projectedPoints[3], projectedPoints[0],  cv::Scalar(31, 240, 255), 4);
+                        cv::line(frame, projectedPoints[4], projectedPoints[5], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[5], projectedPoints[6], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[6], projectedPoints[7], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[7], projectedPoints[4], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[0], projectedPoints[4], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[1], projectedPoints[5], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[2], projectedPoints[6], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[3], projectedPoints[7], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[8], projectedPoints[9], cv::Scalar(0, 0, 0), 2);
+                        // we draw the roof
+                        cv::line(frame, projectedPoints[4], projectedPoints[8], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[5], projectedPoints[8], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[6], projectedPoints[9], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[7], projectedPoints[9], cv::Scalar(0, 0, 0), 2);
+                        cv::line(frame, projectedPoints[8], projectedPoints[9], cv::Scalar(0, 0, 0), 2);
+                    }else{
+                    // lets draw a 3D cuboid on the frame
                     // we first create the 3D points for the cuboid
                     std::vector<cv::Point3f> cuboid;
                     // lets eliminate the first column
@@ -137,7 +189,7 @@ int main()
                     cv::line(frame, projectedCuboid[1], projectedCuboid[5], cv::Scalar(255, 255, 0), 2);
                     cv::line(frame, projectedCuboid[2], projectedCuboid[6], cv::Scalar(255, 255, 0), 2);
                     cv::line(frame, projectedCuboid[3], projectedCuboid[7], cv::Scalar(255, 255, 0), 2);
-
+                    }
                 }
                 else{
                     // print all other values
@@ -221,6 +273,10 @@ int main()
                 std::cout << cameraMatrix << std::endl;
                 std::cout << "Distortion" << std::endl;
                 std::cout << distorstion << std::endl;
+            }
+            if(key == 'e'){
+               // extension 
+               extension =! extension;
             }
         
         }
